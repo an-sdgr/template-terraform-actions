@@ -24,7 +24,7 @@ jobs:
 
       - name: Upload Configuration
         uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
-        id: apply-upload
+        id: upload
         with:
           workspace: ${{ env.TF_WORKSPACE }}
           hostname: ${{ env.TF_CLOUD_HOSTNAME }}
