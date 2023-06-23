@@ -1,0 +1,76 @@
+name: "Repo Setup"
+
+on:
+  workflow_dispatch:
+    inputs:
+        workspace:
+          description: "TFE workspace name"
+          required: true
+          type: string
+        org:
+          description: "TFE Organization"
+          required: true
+          type: string
+        show:
+          description: "Show full plan output in PR comments"
+          required: true
+          type: boolean
+          default: true
+        hostname:
+          description: "TFE hostname"
+          required: true
+          type: string
+        owner:
+          description: "GitHub repo owner"
+          required: true
+          type: string
+        
+
+env:
+  TF_WORKSPACE: "${{ github.event.inputs.workspace }}"
+  TF_CLOUD_ORGANIZATION: "${{ github.event.inputs.org }}"
+  TF_CLOUD_HOSTNAME: "${{ github.event.inputs.hostname }}"
+  $OWNER: "${{ github.event.inputs.owner }}"
+
+jobs:
+  terraform:
+    name: "Repo Setup"
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure PR for TFE output
+        if: github.event.inputs.show == 'false'
+        run: |
+          cat .github/workflows/pull-noshow.yaml | envsubst > .github/workflows/pull.yaml
+          rm workflows/pull-noshow.yaml
+
+      - name: Configure PR for comment output
+        if: github.event.inputs.show == 'true'
+        run: |
+          cat workflows/pull-show.yaml | envsubst > workflows/pull.yaml
+          rm workflows/pull-show.yaml
+
+      - name: Configure main
+        run: |
+          cat workflows/main-default.yaml | envsubst > workflows/main.yaml
+          rm workflows/main-default.yaml
+
+      - name: Configure README
+        run: |
+          cat README.md | envsubst > readme.tmp && rm README.md && mv readme.tmp README.md
+
+      - name: Finalize
+        run: |
+          git config --global user.name 'repo_init'
+          git config --global user.email 'repo_init@users.noreply.github.com'
+          git add workflows/*
+          git rm workflows/main-default.yaml
+          git rm workflows/pull-show.yaml
+          git rm workflows/pull-noshow.yaml
+          git commit -am "Repo Setup"
+          git push
