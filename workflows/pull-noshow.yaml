@@ -31,18 +31,21 @@ jobs:
           directory: ${{ env.CONFIG_DIRECTORY }}
           speculative_run: true
 
-      - name: Create Apply Run
-        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
-        id: apply-run
+      - uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+        id: run
         with:
           workspace: ${{ env.TF_WORKSPACE }}
           hostname: ${{ env.TF_CLOUD_HOSTNAME }}
-          configuration_version: ${{ steps.apply-upload.outputs.configuration_version_id }}
-          message: "${{ github.actor }} 🔎 ${{ github.ref_name }}"
+          configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
+          plan_only: true
 
-      - name: Update PR
-        uses: actions/github-script@v6
-        id: plan-comment
+      - uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.0.0
+        id: plan-output
+        with:
+          plan: ${{ steps.run.outputs.plan_id }}
+
+      - uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -51,27 +54,29 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-            });
+            })
             const botComment = comments.find(comment => {
               return comment.user.type === 'Bot' && comment.body.includes('Terraform Cloud Plan Output')
-            });
+            })
             const output = `#### Terraform Cloud Plan Output
-               \`\`\`
+               \`\`\`\n
                Plan: ${{ steps.plan-output.outputs.add }} to add, ${{ steps.plan-output.outputs.change }} to change, ${{ steps.plan-output.outputs.destroy }} to destroy.
                \`\`\`
-               [Terraform Cloud Plan](${{ steps.plan-run.outputs.run_link }})
-               `;
-            // 3. Delete previous comment so PR timeline makes sense
+               [Terraform Cloud Plan](${{ steps.run.outputs.run_link }})
+               `
+            // 3. If we have a comment, update it, otherwise create a new one
             if (botComment) {
-              github.rest.issues.deleteComment({
+              github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 comment_id: botComment.id,
-              });
+                body: output
+              })
+            } else {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              })
             }
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            });
