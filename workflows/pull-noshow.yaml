@@ -3,6 +3,7 @@ on: [pull_request]
 
 # this version is more secure, as it does not risk leaking information from TFE
 # however, assuming your secrets are properly marked sensitive, it should not be necessary.
+# https://github.com/hashicorp/tfc-workflows-github/blob/main/workflows/terraform-cloud.speculative-run.workflow.yml
 
 env:
   TF_WORKSPACE: "$TF_WORKSPACE"
