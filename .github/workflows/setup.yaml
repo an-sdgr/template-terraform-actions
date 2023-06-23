@@ -46,23 +46,25 @@ jobs:
       - name: Configure PR for TFE output
         if: github.event.inputs.show == 'false'
         run: |
-          cat .github/workflows/pull-noshow.yaml | envsubst > .github/workflows/pull.yaml
+          envsubst < workflows/pull-noshow.yaml > workflows/pull.yaml
           rm workflows/pull-noshow.yaml
 
       - name: Configure PR for comment output
         if: github.event.inputs.show == 'true'
         run: |
-          cat workflows/pull-show.yaml | envsubst > workflows/pull.yaml
+          envsubst < workflows/pull-show.yaml > workflows/pull.yaml
           rm workflows/pull-show.yaml
 
-      - name: Configure main
+      - name: Configure main workflow
         run: |
-          cat workflows/main-default.yaml | envsubst > workflows/main.yaml
+          envsubst < workflows/main-default.yaml > workflows/main.yaml
           rm workflows/main-default.yaml
 
       - name: Configure README
         run: |
-          cat README.md | envsubst > readme.tmp && rm README.md && mv readme.tmp README.md
+          envsubst < README.md > readme.tmp
+          rm README.md
+          mv readme.tmp README.md
 
       - name: Finalize
         run: |
